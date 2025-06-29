@@ -4,7 +4,9 @@ import {
   timestamp,
   boolean,
   integer,
+  pgEnum,
 } from "drizzle-orm/pg-core";
+import { nanoid } from "nanoid";
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -64,4 +66,50 @@ export const verification = pgTable("verification", {
   updatedAt: timestamp("updated_at").$defaultFn(
     () => /* @__PURE__ */ new Date()
   ),
+});
+
+export const meetingStatus = pgEnum("meeting_status", [
+  "upcoming",
+  "active",
+  "completed",
+  "processing",
+  "cancelled",
+]);
+
+export const agents = pgTable("agents", {
+  id: text("id")
+    .primaryKey()
+    .notNull()
+    .$defaultFn(() => nanoid()),
+  name: text("name").notNull(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  instructions: text("intstructions").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const meetings = pgTable("meetings", {
+  id: text("id")
+    .primaryKey()
+    .notNull()
+    .$defaultFn(() => nanoid()),
+  name: text("name").notNull(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  agentId: text("agent_id")
+    .notNull()
+    .references(() => agents.id, { onDelete: "cascade" }),
+  transcriptionUrl: text("transcription_url"),
+  recordingUrl: text("recording_url"),
+  // If you are running a migration to change started_at to timestamp, you might need:
+  // ALTER TABLE meetings ALTER COLUMN started_at TYPE timestamp USING started_at::timestamp without time zone;
+  startedAt: timestamp("started_at").defaultNow(),
+  endedAt: timestamp("ended_at"),
+  summary: text("summary"),
+  status: meetingStatus("status").notNull().default("upcoming"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
